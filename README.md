@@ -22,7 +22,7 @@ Node 18 or newer is the only requirement, and there is nothing to install. You c
 
 ## Extra features
 
-- **Smart quick capture.** Type naturally, e.g. `Revise design notes tomorrow 9pm every Monday #school !1`. Tidy picks out the date, time, repeat, tag and priority, and shows them as chips. Tap a chip to undo that part.
+- **Smart quick capture.** New tasks have Date, Time, Tag, Priority and Repeat fields. You can set them directly, or just type naturally, e.g. `Revise design notes tomorrow 9pm every Monday #school !1`, and the fields fill themselves in. Anything you set by hand wins over the text.
 - **Note → tasks.** Select checklist items in a note and tap **Add to Today**. They become tasks linked back to the note ("In Today"), and ticking them off in either place stays in sync.
 - **Focus sessions.** A timer ring for any task (15 to 90 min), with pause and resume, and "Mark done". Focused minutes are tracked.
 - **Wind down.** An end-of-day review showing tasks done, time focused and what's still open. Tick what should move to tomorrow and close the day.

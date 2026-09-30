@@ -31,9 +31,10 @@ function to24h(h, m, meridiem) {
 /**
  * @param {string} text   raw input
  * @param {Date}   now    reference time (injectable for tests)
+ * @param {{baseDay?:string}} [opts] day a time-only entry lands on (defaults to today)
  * @returns {{title:string,due:string|null,time:string|null,tag:string|null,priority:number,repeat:string|null}}
  */
-export function parseQuickAdd(text, now = new Date()) {
+export function parseQuickAdd(text, now = new Date(), { baseDay = null } = {}) {
   const today = dayKey(now);
   let rest = ` ${text} `;
   const out = { title: '', due: null, time: null, tag: null, priority: 0, repeat: null };
@@ -93,8 +94,8 @@ export function parseQuickAdd(text, now = new Date()) {
 
   // A repeating task with no explicit date starts on its next occurrence.
   if (out.repeat && !out.due) out.due = firstOccurrence(out.repeat, today);
-  // A time with no date means today.
-  if (out.time && !out.due) out.due = today;
+  // A time with no date means the day being planned (today unless told otherwise).
+  if (out.time && !out.due) out.due = baseDay || today;
 
   out.title = rest.replace(/\s+/g, ' ').trim();
   return out;
@@ -143,3 +144,24 @@ export function repeatLabel(repeat) {
 }
 
 export const PRIORITY_LABELS = ['No priority', 'Low priority', 'Medium priority', 'High priority'];
+
+export const CAPTURE_FIELDS = ['due', 'time', 'tag', 'priority', 'repeat'];
+
+/**
+ * Quick-capture form state from the typed text plus any fields the user set by hand.
+ * Fields in `touched` keep the user's value; the rest follow what the text says.
+ * @returns {{title:string, fields:{due:string,time:string|null,tag:string|null,priority:number,repeat:string|null}}}
+ */
+export function fillCapture(text, fields = {}, touched = new Set(), defaultDue = null, now = new Date()) {
+  const parsed = parseQuickAdd(text, now, { baseDay: defaultDue });
+  const fallback = { due: defaultDue, time: null, tag: null, priority: 0, repeat: null };
+  const out = {};
+  CAPTURE_FIELDS.forEach((k) => {
+    out[k] = touched.has(k) ? fields[k] ?? fallback[k] : parsed[k] ?? fallback[k];
+  });
+  if (!out.due) out.due = defaultDue;
+  if (out.tag) out.tag = String(out.tag).trim().replace(/^#/, '') || null;
+  if (out.tag) out.tag = out.tag[0].toUpperCase() + out.tag.slice(1);
+  out.priority = Number(out.priority) || 0;
+  return { title: parsed.title || text.trim(), fields: out };
+}

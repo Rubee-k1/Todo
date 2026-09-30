@@ -2,7 +2,7 @@
 // All data changes go through the store; views are re-rendered from state.
 
 import { createStore, TAGS, NOTE_CATEGORIES, tagColor } from './store.js';
-import { parseQuickAdd, repeatLabel, PRIORITY_LABELS } from './parse.js';
+import { fillCapture, repeatLabel, PRIORITY_LABELS } from './parse.js';
 import {
   dayKey, fromKey, addDays, weekOf, formatTime, relativeDay, shortDate, longDate,
   monthYear, weekdayName, greeting, timeAgo,
@@ -518,21 +518,23 @@ function viewSearch() {
 }
 
 // ---------- Overlays ----------
-function captureChips(parsed, sheet) {
-  const r = sheet.removed;
-  const chips = [];
-  const due = r.has('due') ? null : parsed.due;
-  const time = r.has('time') ? null : parsed.time;
-  if (due || time) chips.push(['date', 'calendar', `${shortDate(due || sheet.defaultDue)}${time ? `, ${formatTime(time)}` : ''}`]);
-  if (parsed.repeat && !r.has('repeat')) chips.push(['repeat', 'repeat', repeatLabel(parsed.repeat)]);
-  if (parsed.tag && !r.has('tag')) chips.push(['tag', 'tag', parsed.tag]);
-  chips.push(['priority', 'flag', PRIORITY_LABELS[r.has('priority') ? 0 : parsed.priority]]);
-  return chips.map(([k, ic, label]) => `<button class="chip parsed" type="button" data-act="unparse" data-key="${k}" aria-label="${esc(label)}. Tap to remove" ${k === 'priority' && (!parsed.priority || r.has('priority')) ? 'disabled style="cursor:default"' : ''}>${icon(ic, { color: 'var(--green)' })}${esc(label)}</button>`).join('');
+const REPEATS = [null, 'daily', 'weekdays', 'weekly', ...[1, 2, 3, 4, 5, 6, 0].map((d) => `weekly:${d}`)];
+const knownTags = () => [...new Set([...Object.keys(TAGS), ...store.state.tasks.map((x) => x.tag).filter(Boolean)])];
+
+/** Date, time, tag, priority and repeat controls for a new task. Filled from the text until set by hand. */
+function captureFields(f) {
+  return `<div class="form-grid" data-cap-fields>
+    <label>Date<input type="date" id="cap-due" data-input="cap-due" data-key="due" value="${esc(f.due || '')}"></label>
+    <label>Time<input type="time" id="cap-time" data-input="cap-time" data-key="time" value="${esc(f.time || '')}"></label>
+    <label>Tag<input id="cap-tag" data-input="cap-tag" data-key="tag" list="cap-tags" value="${esc(f.tag || '')}" placeholder="None" autocomplete="off" maxlength="30"></label>
+    <datalist id="cap-tags">${knownTags().map((t) => `<option value="${esc(t)}"></option>`).join('')}</datalist>
+    <label>Priority<select id="cap-priority" data-input="cap-priority" data-key="priority">${PRIORITY_LABELS.map((l, i) => `<option value="${i}" ${f.priority === i ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="full">Repeat<select id="cap-repeat" data-input="cap-repeat" data-key="repeat">${REPEATS.map((r) => `<option value="${r || ''}" ${f.repeat === r ? 'selected' : ''}>${repeatLabel(r)}</option>`).join('')}</select></label>
+  </div>`;
 }
 
 function sheetCapture(sheet) {
   const isTask = sheet.mode === 'task';
-  const parsed = parseQuickAdd(sheet.text || '');
   return `<div class="scrim" data-act="scrim"><form class="sheet" role="dialog" aria-modal="true" aria-label="Quick capture" data-form="capture">
     <div class="grip"></div>
     <div class="sheet-top">
@@ -545,8 +547,8 @@ function sheetCapture(sheet) {
     ${isTask ? `
       <label class="sr-only" for="cap">Task</label>
       <textarea id="cap" class="field" rows="2" data-input="capture" placeholder="e.g. Revise notes tomorrow 9pm every Monday #school">${esc(sheet.text)}</textarea>
-      <p class="hint">${sheet.text.trim() ? 'Tidy understood this. Tap a chip to undo it.' : 'Type naturally: dates, times, “every Monday”, #tags and !1 for priority.'}</p>
-      <div class="chips" data-chips>${sheet.text.trim() ? captureChips(parsed, sheet) : ''}</div>
+      <p class="hint">Pick a date, time and tag below, or type them, e.g. “tomorrow 9pm #school”.</p>
+      ${captureFields(fillCapture(sheet.text, sheet.fields, sheet.touched, sheet.defaultDue).fields)}
       <button class="btn primary block" type="submit" style="margin-top:8px" ${sheet.text.trim() ? '' : 'disabled'} data-save>Save task</button>`
     : `
       <label class="sr-only" for="cap-title">Note title</label>
@@ -560,8 +562,7 @@ function sheetCapture(sheet) {
 function sheetEdit(sheet) {
   const t = store.findTask(sheet.id);
   if (!t) return '';
-  const tags = [...new Set([...Object.keys(TAGS), ...store.state.tasks.map((x) => x.tag).filter(Boolean)])];
-  const repeats = [null, 'daily', 'weekdays', 'weekly', ...[1, 2, 3, 4, 5, 6, 0].map((d) => `weekly:${d}`)];
+  const tags = knownTags();
   return `<div class="scrim" data-act="scrim"><form class="sheet" role="dialog" aria-modal="true" aria-label="Edit task" data-form="edit">
     <div class="grip"></div>
     <div class="sheet-top"><strong style="font-size:18px">Edit task</strong>
@@ -575,7 +576,7 @@ function sheetEdit(sheet) {
       <label>Tag<select name="tag"><option value="">None</option>${tags.map((x) => `<option ${t.tag === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
       <label>Priority<select name="priority">${PRIORITY_LABELS.map((l, i) => `<option value="${i}" ${t.priority === i ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label>Focus length<select name="duration">${[15, 25, 45, 60, 90].map((m) => `<option value="${m}" ${t.duration === m ? 'selected' : ''}>${m} min</option>`).join('')}</select></label>
-      <label class="full">Repeat<select name="repeat">${repeats.map((r) => `<option value="${r || ''}" ${t.repeat === r ? 'selected' : ''}>${repeatLabel(r)}</option>`).join('')}</select></label>
+      <label class="full">Repeat<select name="repeat">${REPEATS.map((r) => `<option value="${r || ''}" ${t.repeat === r ? 'selected' : ''}>${repeatLabel(r)}</option>`).join('')}</select></label>
     </div>
     <div style="display:flex;gap:10px">
       <button type="button" class="btn" style="color:var(--danger)" data-act="delete-task" data-id="${t.id}">${icon('trash', { size: 18 })} Delete</button>
@@ -702,10 +703,15 @@ function refreshCapture() {
   if (!form) return;
   const save = form.querySelector('[data-save]');
   if (sheet.mode === 'task') {
-    const has = !!sheet.text.trim();
-    form.querySelector('[data-chips]').innerHTML = has ? captureChips(parseQuickAdd(sheet.text), sheet) : '';
-    form.querySelector('.hint').textContent = has ? 'Tidy understood this. Tap a chip to undo it.' : 'Type naturally: dates, times, “every Monday”, #tags and !1 for priority.';
-    save.disabled = !has;
+    // Fields the user hasn't set by hand follow the text as it is typed.
+    const { fields } = fillCapture(sheet.text, sheet.fields, sheet.touched, sheet.defaultDue);
+    form.querySelectorAll('[data-cap-fields] [data-key]').forEach((el) => {
+      const k = el.dataset.key;
+      if (sheet.touched.has(k)) return;
+      const v = fields[k] == null ? '' : String(fields[k]);
+      if (el.value !== v) el.value = v;
+    });
+    save.disabled = !sheet.text.trim();
   } else {
     save.disabled = !(sheet.text + (sheet.title || '')).trim();
   }
@@ -721,7 +727,7 @@ function toast(text, undo = null) {
 function openCapture(opts = {}) {
   ui.sheet = {
     kind: 'capture', mode: opts.mode || 'task', text: opts.text || '', title: opts.title || '',
-    removed: new Set(), defaultDue: opts.due || (ui.route === 'tasks' ? ui.selectedDay : store.today()),
+    fields: {}, touched: new Set(), defaultDue: opts.due || (ui.route === 'tasks' ? ui.selectedDay : store.today()),
   };
   render();
 }
@@ -736,18 +742,9 @@ function closeOverlays() {
 function saveCapture() {
   const s = ui.sheet;
   if (s.mode === 'task') {
-    const p = parseQuickAdd(s.text);
-    const r = s.removed;
-    const title = p.title || s.text.trim();
+    const { title, fields } = fillCapture(s.text, s.fields, s.touched, s.defaultDue);
     if (!title) return;
-    store.addTask({
-      title,
-      due: r.has('due') ? s.defaultDue : (p.due || s.defaultDue),
-      time: r.has('time') ? null : p.time,
-      tag: r.has('tag') ? null : p.tag,
-      priority: r.has('priority') ? 0 : p.priority,
-      repeat: r.has('repeat') ? null : p.repeat,
-    });
+    store.addTask({ title, ...fields });
     ui.sheet = null;
     toast(`“${title}” added`);
   } else {
@@ -851,11 +848,6 @@ const actions = {
   'close-dialog': closeOverlays,
   scrim: (el, e) => { if (e.target === el) closeOverlays(); },
   'cap-mode': (el) => { ui.sheet.mode = el.dataset.mode; render(); },
-  unparse: (el) => {
-    const k = el.dataset.key;
-    if (k === 'date') { ui.sheet.removed.add('due'); ui.sheet.removed.add('time'); } else ui.sheet.removed.add(k);
-    refreshCapture();
-  },
   toggle: (el) => store.toggleDone(el.dataset.id),
   cycle: (el) => store.cycleStatus(el.dataset.id),
   edit: (el) => { ui.sheet = { kind: 'edit', id: el.dataset.id }; render(); },
@@ -971,6 +963,12 @@ $app.addEventListener('input', (e) => {
   const quiet = (fn) => { suppressRender = true; try { fn(); } finally { suppressRender = false; } };
   if (kind === 'capture') { ui.sheet.text = el.value; refreshCapture(); }
   else if (kind === 'capture-title') { ui.sheet.title = el.value; refreshCapture(); }
+  else if (kind.startsWith('cap-') && ui.sheet) {
+    // A field set by hand stops following the typed text.
+    const k = el.dataset.key;
+    ui.sheet.fields[k] = k === 'priority' ? Number(el.value) : el.value || null;
+    ui.sheet.touched.add(k);
+  }
   else if (kind === 'search') {
     ui.searchQuery = el.value;
     render();

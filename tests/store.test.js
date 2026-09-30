@@ -162,14 +162,19 @@ test('focus minutes are logged per day', () => {
 test('state persists and survives corrupt storage', () => {
   const storage = memoryStorage();
   const s1 = make(storage);
-  s1.setName('Tomi');
   s1.addTask({ title: 'Persist me' });
   const s2 = make(storage);
-  assert.equal(s2.state.profile.name, 'Tomi');
   assert.equal(s2.state.tasks[0].title, 'Persist me');
 
   const broken = make(memoryStorage({ [STORAGE_KEY]: '{not json' }));
   assert.deepEqual(broken.state.tasks, []);
+});
+
+test('old saves with a profile still load, and the profile is dropped', () => {
+  const old = { version: 1, profile: { name: 'Tomi' }, tasks: [], notes: [], focusLog: [] };
+  const s = make(memoryStorage({ [STORAGE_KEY]: JSON.stringify(old) }));
+  assert.equal(s.state.profile, undefined);
+  assert.deepEqual(s.state.tasks, []);
 });
 
 test('sample day loads tasks and notes', () => {

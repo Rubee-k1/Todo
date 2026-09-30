@@ -28,7 +28,7 @@ Node 18 or newer is the only requirement, and there is nothing to install. You c
 - **Wind down.** An end-of-day review showing tasks done, time focused and what's still open. Tick what should move to tomorrow and close the day.
 - **Repeating tasks.** Every day, weekday, week or a specific weekday. Completing one schedules the next.
 - **Search** across tasks, notes and checklist items, with an empty state that offers to create the task or note you searched for.
-- Offline banner, first-run welcome, a sample day to explore, and keyboard shortcuts (`n` for new, `/` for search, `Esc` to close).
+- Offline banner, a sample day to explore, and keyboard shortcuts (`n` for new, `/` for search, `Esc` to close).
 
 ## Project structure
 

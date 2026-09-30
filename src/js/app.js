@@ -150,26 +150,6 @@ function itemsLeft(note) {
 }
 
 // ---------- Views ----------
-function viewWelcome() {
-  return `<main class="welcome">
-    <div>
-      <div class="brand">tidy<span>.</span></div>
-      <h1>Focus more.<br>Scroll less.</h1>
-      <p>Tasks and notes in one calm place, with a timer that keeps you on the one thing that matters.</p>
-      <div class="hero">
-        <div>${icon('check', { color: 'var(--green)' })} Capture tasks in plain words</div>
-        <div>${icon('note', { color: 'var(--green)' })} Turn notes into today's tasks</div>
-        <div>${icon('timer', { color: 'var(--green)' })} Focus sessions and a calm wind-down</div>
-      </div>
-    </div>
-    <form data-form="welcome">
-      <label for="name">What should we call you?</label>
-      <input id="name" name="name" autocomplete="given-name" placeholder="Your first name" maxlength="40" required>
-      <button class="btn primary block" type="submit">Get started</button>
-    </form>
-  </main>`;
-}
-
 function viewToday() {
   const now = new Date();
   const { list, doneCount, total, upNext: rawNext } = store.todaySummary();
@@ -212,7 +192,7 @@ function viewToday() {
       ${icon('chevronRight', { size: 18, color: 'var(--muted)' })}</a>`) : '';
 
   return `<header class="head">
-      <div><div class="eyebrow">${longDate(now)}</div><h1>${greeting(now)}${store.state.profile.name ? `, ${esc(store.state.profile.name)}` : ''}</h1></div>
+      <div><div class="eyebrow">${longDate(now)}</div><h1>${greeting(now)}</h1></div>
       <div class="actions"><a class="icon-btn" href="#/search" aria-label="Search">${icon('search')}</a></div>
     </header>
     <div class="stack">
@@ -633,7 +613,6 @@ let lastOverlayKey = '';
 function render() {
   // Never let a re-render throw away note text that is still being debounced.
   if (pendingNoteSave) { clearTimeout(noteSaveTimer); pendingNoteSave(); }
-  const onboarding = !store.state.profile.name;
   const views = { today: viewToday, tasks: viewTasks, focus: viewFocus, notes: viewNotes, note: viewNote, winddown: viewWindDown, search: viewSearch };
   const viewFn = views[ui.route] || viewToday;
 
@@ -647,8 +626,8 @@ function render() {
   const overlayKey = `${ui.sheet?.kind || ''}${ui.sheet?.mode || ''}${ui.sheet?.id || ''}${ui.dialog?.kind || ''}`;
   const keepModal = overlayKey && overlayKey === lastOverlayKey ? $app.querySelector('#overlay .scrim') : null;
 
-  const showNav = !onboarding && !['search', 'note'].includes(ui.route) && !(ui.route === 'focus' && focus.active);
-  $app.innerHTML = onboarding ? viewWelcome() : `
+  const showNav = !['search', 'note'].includes(ui.route) && !(ui.route === 'focus' && focus.active);
+  $app.innerHTML = `
     ${ui.online ? '' : `<div class="banner" role="status">${icon('wifiOff', { size: 18 })} You're offline. Everything is saved on this device.</div>`}
     <main class="view ${ui.route === 'tasks' ? 'has-fab' : ''}" id="main">${viewFn()}</main>
     ${showNav ? nav() : ''}
@@ -957,10 +936,7 @@ $app.addEventListener('submit', (e) => {
   e.preventDefault();
   const form = e.target;
   const kind = form.dataset.form;
-  if (kind === 'welcome') {
-    const name = new FormData(form).get('name').trim();
-    if (name) { store.setName(name); go('#/today'); }
-  } else if (kind === 'capture') {
+  if (kind === 'capture') {
     saveCapture();
   } else if (kind === 'edit') {
     const f = new FormData(form);
@@ -998,7 +974,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'Enter' && e.target.dataset?.input === 'item') { e.preventDefault(); e.target.blur(); return; }
-  if (typing || e.metaKey || e.ctrlKey || e.altKey || !store.state.profile.name) return;
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === 'n' && !ui.sheet) { e.preventDefault(); openCapture(); }
   if (e.key === '/' && !ui.sheet) { e.preventDefault(); go('#/search'); setTimeout(() => $app.querySelector('#q')?.focus(), 0); }
 });

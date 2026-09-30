@@ -232,20 +232,6 @@ a{color:var(--green)}
 .search-bar input{flex:1;height:48px;border:1px solid var(--field);border-radius:14px;padding:0 14px;font-size:16px;outline:none}
 .search-bar input:focus{border-color:var(--green)}
 
-/* Welcome */
-.welcome{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:48px 24px 32px}
-.welcome .brand{font-size:44px;font-weight:700;letter-spacing:-.04em}
-.welcome .brand span{color:var(--green)}
-.welcome h1{font-size:34px;line-height:1.1;letter-spacing:-.03em;margin:24px 0 12px}
-.welcome p{color:var(--muted);font-size:17px;margin:0}
-.welcome form{display:flex;flex-direction:column;gap:12px}
-.welcome label{font-weight:600}
-.welcome input{height:56px;border:1px solid var(--field);border-radius:14px;padding:0 16px;font-size:17px;outline:none}
-.welcome input:focus{border-color:var(--green)}
-.hero{background:var(--green-soft);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:10px;margin-top:28px}
-.hero div{display:flex;gap:10px;align-items:center;font-weight:600}
-.hero svg{width:20px;height:20px;flex-shrink:0}
-
 @keyframes up{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

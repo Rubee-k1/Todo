@@ -22,7 +22,7 @@ export function tagColor(tag) {
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
 export function emptyState() {
-  return { version: 1, profile: { name: '' }, tasks: [], notes: [], focusLog: [] };
+  return { version: 1, tasks: [], notes: [], focusLog: [] };
 }
 
 export function createStore({ storage = null, now = () => new Date() } = {}) {
@@ -34,7 +34,8 @@ export function createStore({ storage = null, now = () => new Date() } = {}) {
     try {
       const raw = storage.getItem(STORAGE_KEY);
       if (!raw) return emptyState();
-      const parsed = JSON.parse(raw);
+      // Older saves carried a local profile (name) from a removed welcome screen; drop it.
+      const { profile, ...parsed } = JSON.parse(raw);
       return { ...emptyState(), ...parsed };
     } catch {
       return emptyState();
@@ -51,12 +52,6 @@ export function createStore({ storage = null, now = () => new Date() } = {}) {
   const today = () => dayKey(now());
   const findTask = (id) => state.tasks.find((t) => t.id === id);
   const findNote = (id) => state.notes.find((n) => n.id === id);
-
-  // ---------- profile ----------
-  function setName(name) {
-    state.profile.name = name.trim();
-    commit();
-  }
 
   // ---------- tasks ----------
   function addTask(fields) {
@@ -356,9 +351,7 @@ export function createStore({ storage = null, now = () => new Date() } = {}) {
   }
 
   function reset() {
-    const name = state.profile.name;
     state = emptyState();
-    state.profile.name = name;
     commit();
   }
 
@@ -366,7 +359,6 @@ export function createStore({ storage = null, now = () => new Date() } = {}) {
     get state() { return state; },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     today, findTask, findNote,
-    setName,
     addTask, updateTask, setStatus, cycleStatus, toggleDone, deleteTask, restoreTask, moveToTomorrow,
     addNote, updateNote, togglePin, deleteNote, addNoteItem, updateNoteItem, removeNoteItem, sendItemsToToday,
     logFocus, focusMinutesOn,

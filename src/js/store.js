@@ -308,7 +308,11 @@ export function createStore({ storage = null, now = () => new Date() } = {}) {
     return { tasks: scope === 'notes' ? [] : tasks.sort(byTime), notes };
   }
 
+  const isEmpty = () => state.tasks.length === 0 && state.notes.length === 0 && state.focusLog.length === 0;
+
+  /** Replaces everything with a realistic example day, so it can be loaded again without duplicates. */
   function loadSample() {
+    state = emptyState();
     const t = today();
     const mk = (title, due, extra = {}) => ({
       id: uid(), title, status: 'todo', due, time: null, tag: null, priority: 0, repeat: null,
@@ -350,6 +354,7 @@ export function createStore({ storage = null, now = () => new Date() } = {}) {
     commit();
   }
 
+  /** Clears all tasks, notes and focus history. */
   function reset() {
     state = emptyState();
     commit();
@@ -363,6 +368,6 @@ export function createStore({ storage = null, now = () => new Date() } = {}) {
     addNote, updateNote, togglePin, deleteNote, addNoteItem, updateNoteItem, removeNoteItem, sendItemsToToday,
     logFocus, focusMinutesOn,
     overdue, tasksOn, inProgress, upcoming, done, todaySummary, search,
-    loadSample, reset,
+    isEmpty, loadSample, reset,
   };
 }

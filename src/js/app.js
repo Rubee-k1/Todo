@@ -158,7 +158,6 @@ function viewToday() {
     upNext = store.tasksOn(store.today()).find((t) => t.status !== 'done' && !ui.skipped.has(t.id)) || null;
   }
   const recentNote = [...store.state.notes].sort((a, b) => b.updatedAt - a.updatedAt)[0];
-  const isBlank = store.state.tasks.length === 0 && store.state.notes.length === 0;
 
   let body;
   if (total === 0) {
@@ -166,7 +165,7 @@ function viewToday() {
       ic: 'sun', title: 'Your day is clear',
       text: 'Add the first thing you want to get done today. Tidy will keep it in front of you.',
       actions: `<button class="btn primary block" data-act="capture">${icon('plus')} Add a task</button>
-        ${isBlank ? '<button class="btn block" data-act="sample">Start with a sample day</button>' : ''}`,
+        <button class="btn block" data-act="ask-sample">Start with a sample day</button>`,
     });
   } else {
     const hero = doneCount === total
@@ -193,13 +192,25 @@ function viewToday() {
 
   return `<header class="head">
       <div><div class="eyebrow">${longDate(now)}</div><h1>${greeting(now)}</h1></div>
-      <div class="actions"><a class="icon-btn" href="#/search" aria-label="Search">${icon('search')}</a></div>
+      <div class="actions">
+        <a class="icon-btn" href="#/search" aria-label="Search">${icon('search')}</a>
+        <button class="icon-btn" data-act="menu" aria-label="Data options" aria-expanded="${ui.menuOpen}" aria-haspopup="menu">${icon('more')}</button>
+      </div>
     </header>
+    ${ui.menuOpen ? dataMenu() : ''}
     <div class="stack">
       <button class="capture" data-act="capture">${icon('plus', { color: 'var(--green)', width: 2.2 })}<span>Add a task or note…</span></button>
       ${body}
       ${total ? resume : ''}
     </div>`;
+}
+
+/** Today's ••• menu: load the example data or start over with an empty app. */
+function dataMenu() {
+  return `<div class="menu" role="menu" aria-label="Data options">
+    <button role="menuitem" data-act="ask-sample">${icon('sun')} Load sample data</button>
+    <button role="menuitem" class="bad" data-act="ask-clear" ${store.isEmpty() ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${icon('trash')} Clear all data</button>
+  </div>`;
 }
 
 function viewTasks() {
@@ -307,7 +318,8 @@ function viewNotes() {
     : emptyState({
       ic: 'note', title: ui.noteFilter === 'All' ? 'No notes yet' : `No ${ui.noteFilter.toLowerCase()} notes`,
       text: 'Write down ideas, lists and class notes. Checklist items can become tasks for today.',
-      actions: `<button class="btn primary block" data-act="new-note">${icon('pen')} New note</button>`,
+      actions: `<button class="btn primary block" data-act="new-note">${icon('pen')} New note</button>
+        ${store.isEmpty() ? '<button class="btn block" data-act="ask-sample">Load sample data</button>' : ''}`,
     });
 
   return `<header class="head">
@@ -589,10 +601,28 @@ function dialogDeleteNote(d) {
   </div></div>`;
 }
 
+/** Confirmation for replacing or clearing everything. Both are destructive, so both ask first. */
+function dialogData(d) {
+  const t = store.state.tasks.length;
+  const n = store.state.notes.length;
+  const what = [t && `${t} ${t === 1 ? 'task' : 'tasks'}`, n && `${n} ${n === 1 ? 'note' : 'notes'}`].filter(Boolean).join(' and ') || 'your focus history';
+  const sample = d.kind === 'sample';
+  return `<div class="scrim center" data-act="scrim"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+    <div class="ico" ${sample ? 'style="background:var(--green-soft);color:var(--green)"' : ''}>${icon(sample ? 'sun' : 'trash', { size: 22 })}</div>
+    <h2 id="dlg-t">${sample ? 'Replace with sample data?' : 'Clear all data?'}</h2>
+    <p id="dlg-d">${sample
+    ? `Your ${esc(what)} will be replaced by an example day of tasks and notes.`
+    : `Your ${esc(what)} will be deleted from this device. You'll start with an empty app.`} This can't be undone.</p>
+    <button class="btn ${sample ? 'primary' : 'danger'} block" data-act="${sample ? 'confirm-sample' : 'confirm-clear'}">${sample ? 'Load sample data' : 'Clear everything'}</button>
+    <button class="btn block" data-act="close-dialog" data-autofocus>Cancel</button>
+  </div></div>`;
+}
+
 function modalHtml() {
   if (ui.sheet?.kind === 'capture') return sheetCapture(ui.sheet);
   if (ui.sheet?.kind === 'edit') return sheetEdit(ui.sheet);
   if (ui.dialog?.kind === 'delete-note') return dialogDeleteNote(ui.dialog);
+  if (ui.dialog?.kind === 'sample' || ui.dialog?.kind === 'clear') return dialogData(ui.dialog);
   return '';
 }
 
@@ -735,6 +765,24 @@ function deleteTask(id) {
   if (snap) toast(`“${snap.task.title}” deleted`, () => store.restoreTask(snap));
 }
 
+/** Forgets UI state that points at tasks or notes which are about to disappear. */
+function resetSession() {
+  if (focus.active) endFocus();
+  focus.taskId = null;
+  ui.skipped.clear();
+  ui.noteSelection.clear();
+  ui.windSel = null;
+  ui.selectedDay = store.today();
+  ui.tab = 'all';
+}
+
+function loadSampleData() {
+  resetSession();
+  store.loadSample();
+  go('#/today');
+  toast('Sample day loaded');
+}
+
 let ticker = null;
 function startTicker() {
   clearInterval(ticker);
@@ -783,7 +831,22 @@ function endFocus() {
 
 const actions = {
   capture: () => openCapture(),
-  sample: () => store.loadSample(),
+  // Loading straight away is safe when there's nothing to lose; otherwise confirm first.
+  'ask-sample': () => {
+    ui.menuOpen = false;
+    if (store.isEmpty()) { loadSampleData(); return; }
+    ui.dialog = { kind: 'sample' };
+    render();
+  },
+  'confirm-sample': () => { ui.dialog = null; loadSampleData(); },
+  'ask-clear': () => { ui.menuOpen = false; ui.dialog = { kind: 'clear' }; render(); },
+  'confirm-clear': () => {
+    ui.dialog = null;
+    resetSession();
+    store.reset();
+    go('#/today');
+    toast('All data cleared');
+  },
   'close-sheet': closeOverlays,
   'close-dialog': closeOverlays,
   scrim: (el, e) => { if (e.target === el) closeOverlays(); },

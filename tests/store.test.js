@@ -177,11 +177,32 @@ test('old saves with a profile still load, and the profile is dropped', () => {
   assert.deepEqual(s.state.tasks, []);
 });
 
-test('sample day loads tasks and notes', () => {
+test('sample day loads tasks and notes, and reset empties the app', () => {
   const s = make();
+  assert.equal(s.isEmpty(), true);
   s.loadSample();
+  assert.equal(s.isEmpty(), false);
   assert.ok(s.todaySummary().total > 0);
   assert.ok(s.state.notes.some((n) => n.pinned));
   s.reset();
-  assert.equal(s.state.tasks.length, 0);
+  assert.equal(s.isEmpty(), true);
+  assert.equal(s.todaySummary().total, 0);
+});
+
+test('loading the sample again replaces data instead of duplicating it', () => {
+  const s = make();
+  s.addTask({ title: 'My own task' });
+  s.loadSample();
+  const counts = [s.state.tasks.length, s.state.notes.length, s.state.focusLog.length];
+  s.loadSample();
+  assert.deepEqual([s.state.tasks.length, s.state.notes.length, s.state.focusLog.length], counts);
+  assert.ok(!s.state.tasks.some((t) => t.title === 'My own task'));
+});
+
+test('clearing persists, so a reload starts empty', () => {
+  const storage = memoryStorage();
+  const s1 = make(storage);
+  s1.loadSample();
+  s1.reset();
+  assert.equal(make(storage).isEmpty(), true);
 });

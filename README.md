@@ -28,7 +28,8 @@ Node 18 or newer is the only requirement, and there is nothing to install. You c
 - **Wind down.** An end-of-day review showing tasks done, time focused and what's still open. Tick what should move to tomorrow and close the day.
 - **Repeating tasks.** Every day, weekday, week or a specific weekday. Completing one schedules the next.
 - **Search** across tasks, notes and checklist items, with an empty state that offers to create the task or note you searched for.
-- Offline banner, a sample day to explore, and keyboard shortcuts (`n` for new, `/` for search, `Esc` to close).
+- **Sample data or a clean slate.** The ••• menu on Today can **Load sample data**, which fills the app with an example day of tasks and notes, or **Clear all data** to see the empty pages. Both ask for confirmation first if you have data. The empty Today and Notes pages also offer the sample.
+- Offline banner, and keyboard shortcuts (`n` for new, `/` for search, `Esc` to close).
 
 ## Project structure
 

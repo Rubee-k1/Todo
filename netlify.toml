@@ -1,0 +1,10 @@
+# Netlify: the app is static files in src/ with no build step.
+[build]
+  publish = "src"
+  command = ""
+
+# Serve fresh JS/CSS after each deploy (ES modules are cached aggressively otherwise).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

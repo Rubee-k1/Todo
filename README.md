@@ -9,7 +9,7 @@ npm start      # serves src/ at http://localhost:5173
 npm test       # unit tests (Node's built-in test runner)
 ```
 
-Node 18 or newer is the only requirement, and there is nothing to install. You can also serve the `src/` folder with any static server, or deploy it as-is to GitHub Pages, Netlify or Vercel.
+Node 18 or newer is the only requirement, and there is nothing to install. You can also serve the `src/` folder with any static server, or deploy it as-is to GitHub Pages, Netlify or Vercel. For Netlify, the included `netlify.toml` sets the publish directory to `src` with no build command.
 
 ## Core features (CRUD)
 
